@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Finance Dashboard</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN (jsDelivr — works offline after first cache) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Inline dataset — avoids fetch() CORS block on file:// -->
+  <script src="data.js"></script>
+
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <script>
+    /* Extend Tailwind with custom design tokens */
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:  '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            },
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'Segoe UI', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+
+  <!-- ============================================================
+       TOP NAV BAR
+  ============================================================ -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">₿</div>
+        <div>
+          <h1 class="text-base font-semibold text-gray-900 leading-tight">Personal Finance Dashboard</h1>
+          <p class="text-xs text-gray-500">Jan 2018 – Sep 2019</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="lastUpdated" class="text-xs text-gray-400 hidden sm:block"></span>
+        <button id="resetFiltersBtn"
+          class="text-xs px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors font-medium">
+          Reset Filters
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       FILTER BAR
+  ============================================================ -->
+  <section class="bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-3">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="filterBar">
+
+        <!-- Date From -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">From</label>
+          <input type="date" id="filterDateFrom"
+            class="filter-input rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+        </div>
+
+        <!-- Date To -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">To</label>
+          <input type="date" id="filterDateTo"
+            class="filter-input rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" />
+        </div>
+
+        <!-- Transaction Type -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Type</label>
+          <select id="filterType"
+            class="filter-input rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+            <option value="">All Types</option>
+            <option value="debit">Debit</option>
+            <option value="credit">Credit</option>
+          </select>
+        </div>
+
+        <!-- Category -->
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Category</label>
+          <select id="filterCategory"
+            class="filter-input rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+
+        <!-- Account Name (spans 2 on mobile) -->
+        <div class="flex flex-col gap-1 col-span-2 sm:col-span-4">
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wide">Account</label>
+          <select id="filterAccount"
+            class="filter-input rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition sm:w-64">
+            <option value="">All Accounts</option>
+          </select>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       MAIN CONTENT
+  ============================================================ -->
+  <main class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
+      <div class="text-center">
+        <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+        <p class="text-sm text-gray-600 font-medium">Loading data…</p>
+      </div>
+    </div>
+
+    <!-- ── KPI CARDS ────────────────────────────────────────────── -->
+    <section aria-label="Key Performance Indicators">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4" id="kpiGrid">
+
+        <div class="kpi-card bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+          <p class="text-xs text-gray-500 font-medium mb-1">Total Income</p>
+          <p id="kpiIncome" class="text-xl font-bold text-green-600">—</p>
+          <p class="text-xs text-gray-400 mt-1">Paycheck credits</p>
+        </div>
+
+        <div class="kpi-card bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+          <p class="text-xs text-gray-500 font-medium mb-1">Total Expenses</p>
+          <p id="kpiExpenses" class="text-xl font-bold text-red-500">—</p>
+          <p class="text-xs text-gray-400 mt-1">Excl. CC payments</p>
+        </div>
+
+        <div class="kpi-card bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+          <p class="text-xs text-gray-500 font-medium mb-1">Net Cash Flow</p>
+          <p id="kpiNet" class="text-xl font-bold text-blue-600">—</p>
+          <p class="text-xs text-gray-400 mt-1">Income − Expenses</p>
+        </div>
+
+        <div class="kpi-card bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+          <p class="text-xs text-gray-500 font-medium mb-1">Transactions</p>
+          <p id="kpiTxCount" class="text-xl font-bold text-gray-800">—</p>
+          <p class="text-xs text-gray-400 mt-1">Filtered count</p>
+        </div>
+
+        <div class="kpi-card bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+          <p class="text-xs text-gray-500 font-medium mb-1">Avg Monthly Exp.</p>
+          <p id="kpiAvgMonthly" class="text-xl font-bold text-orange-500">—</p>
+          <p class="text-xs text-gray-400 mt-1">Per month</p>
+        </div>
+
+        <div class="kpi-card bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+          <p class="text-xs text-gray-500 font-medium mb-1">Savings Rate</p>
+          <p id="kpiSavings" class="text-xl font-bold text-purple-600">—</p>
+          <p class="text-xs text-gray-400 mt-1">% of income saved</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── CHARTS ROW 1: Monthly Income vs Expenses + Expenses by Category ── -->
+    <section aria-label="Primary charts">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <div class="chart-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="chart-title text-sm font-semibold text-gray-700 mb-4">Monthly Income vs Expenses</h3>
+          <div class="chart-container"><canvas id="chartMonthly"></canvas></div>
+        </div>
+
+        <div class="chart-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="chart-title text-sm font-semibold text-gray-700 mb-4">Expenses by Category</h3>
+          <div class="chart-container"><canvas id="chartExpCat"></canvas></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── CHARTS ROW 2: Type Distribution + Account Distribution ── -->
+    <section aria-label="Distribution charts">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div class="chart-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="chart-title text-sm font-semibold text-gray-700 mb-4">Transaction Type Distribution</h3>
+          <div class="chart-container-sm"><canvas id="chartTypeDistrib"></canvas></div>
+        </div>
+
+        <div class="chart-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="chart-title text-sm font-semibold text-gray-700 mb-4">Account Activity Distribution</h3>
+          <div class="chart-container-sm"><canvas id="chartAccountDistrib"></canvas></div>
+        </div>
+
+        <div class="chart-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="chart-title text-sm font-semibold text-gray-700 mb-4">Transaction Amount Distribution</h3>
+          <div class="chart-container-sm"><canvas id="chartAmtDistrib"></canvas></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── CHARTS ROW 3: Top 10 + Monthly Spending Trends + Category Comparison ── -->
+    <section aria-label="Advanced charts">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <div class="chart-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="chart-title text-sm font-semibold text-gray-700 mb-4">Top 10 Highest Transactions</h3>
+          <div class="chart-container"><canvas id="chartTop10"></canvas></div>
+        </div>
+
+        <div class="chart-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="chart-title text-sm font-semibold text-gray-700 mb-4">Monthly Spending Trends (Expense Categories)</h3>
+          <div class="chart-container"><canvas id="chartTrends"></canvas></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── CHART ROW 4: Category Comparison (Radar) ── -->
+    <section aria-label="Radar chart">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <div class="chart-card bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="chart-title text-sm font-semibold text-gray-700 mb-4">Expense Category Comparison (Radar)</h3>
+          <div class="chart-container-sm"><canvas id="chartRadar"></canvas></div>
+        </div>
+
+        <!-- Summary Stats panel -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="text-sm font-semibold text-gray-700 mb-4">Category Summary</h3>
+          <div id="categorySummary" class="space-y-2 overflow-y-auto max-h-64"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── TRANSACTION TABLE ──────────────────────────────────────── -->
+    <section aria-label="Transaction table">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+
+        <!-- Table header / search -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-b border-gray-100">
+          <h3 class="text-sm font-semibold text-gray-700">Transaction Log</h3>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <input type="search" id="tableSearch" placeholder="Search description…"
+              class="w-full sm:w-56 rounded-lg border border-gray-200 px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition" />
+            <span id="tableCount" class="text-xs text-gray-400 whitespace-nowrap"></span>
+          </div>
+        </div>
+
+        <!-- Scrollable table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+              <tr>
+                <th class="sortable px-4 py-3 cursor-pointer select-none hover:bg-gray-100 transition" data-col="date">Date <span class="sort-icon">↕</span></th>
+                <th class="px-4 py-3">Description</th>
+                <th class="sortable px-4 py-3 cursor-pointer select-none hover:bg-gray-100 transition" data-col="amount">Amount <span class="sort-icon">↕</span></th>
+                <th class="px-4 py-3">Type</th>
+                <th class="px-4 py-3">Category</th>
+                <th class="px-4 py-3">Account</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-gray-50">
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50">
+          <select id="pageSize" class="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="10">10 / page</option>
+            <option value="25" selected>25 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
+          <div id="pagination" class="flex items-center gap-1"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center py-6 text-xs text-gray-400 border-t border-gray-200 mt-4">
+    Personal Finance Dashboard &mdash; Data: Jan 2018 – Sep 2019
+  </footer>
+
+  <!-- Main script -->
+  <script src="script.js"></script>
+</body>
+</html>

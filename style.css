@@ -1,0 +1,159 @@
+/* =============================================================
+   style.css – Personal Finance Dashboard
+   Supplements Tailwind CSS with custom chart sizing & animations
+   ============================================================= */
+
+/* ── Chart container heights ────────────────────────────────── */
+.chart-container {
+  position: relative;
+  height: 280px;
+  width: 100%;
+}
+
+.chart-container-sm {
+  position: relative;
+  height: 220px;
+  width: 100%;
+}
+
+/* ── KPI card subtle left-accent on hover ───────────────────── */
+.kpi-card {
+  border-left: 3px solid transparent;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.kpi-card:hover {
+  border-left-color: #3b82f6;
+}
+
+/* ── Chart card top-accent on hover ─────────────────────────── */
+.chart-card {
+  border-top: 3px solid transparent;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.chart-card:hover {
+  border-top-color: #3b82f6;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.08);
+}
+
+/* ── Smooth fade-in for content blocks ──────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.kpi-card,
+.chart-card {
+  animation: fadeIn 0.35s ease both;
+}
+
+/* Stagger the KPI cards */
+#kpiGrid .kpi-card:nth-child(1) { animation-delay: 0.05s; }
+#kpiGrid .kpi-card:nth-child(2) { animation-delay: 0.10s; }
+#kpiGrid .kpi-card:nth-child(3) { animation-delay: 0.15s; }
+#kpiGrid .kpi-card:nth-child(4) { animation-delay: 0.20s; }
+#kpiGrid .kpi-card:nth-child(5) { animation-delay: 0.25s; }
+#kpiGrid .kpi-card:nth-child(6) { animation-delay: 0.30s; }
+
+/* ── Table row hover ─────────────────────────────────────────── */
+#tableBody tr {
+  transition: background-color 0.15s ease;
+}
+#tableBody tr:hover {
+  background-color: #f0f7ff;
+}
+
+/* ── Sort icons ─────────────────────────────────────────────── */
+th.sortable .sort-icon {
+  display: inline-block;
+  opacity: 0.4;
+  font-size: 0.7rem;
+  margin-left: 2px;
+  transition: opacity 0.15s;
+}
+th.sortable:hover .sort-icon {
+  opacity: 1;
+}
+th.sort-asc  .sort-icon { opacity: 1; color: #2563eb; }
+th.sort-desc .sort-icon { opacity: 1; color: #2563eb; }
+
+/* ── Pagination buttons ─────────────────────────────────────── */
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.page-btn:hover:not(:disabled) {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+.page-btn.active {
+  background-color: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Badge chips ────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.badge-debit  { background: #fef2f2; color: #dc2626; }
+.badge-credit { background: #f0fdf4; color: #16a34a; }
+
+/* ── Category progress bars ─────────────────────────────────── */
+.cat-bar-track {
+  height: 4px;
+  background: #f3f4f6;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.cat-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: #3b82f6;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Scrollbar styling for webkit ───────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ── Responsive chart heights on small screens ──────────────── */
+@media (max-width: 640px) {
+  .chart-container    { height: 220px; }
+  .chart-container-sm { height: 200px; }
+}
